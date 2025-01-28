@@ -46,7 +46,7 @@ export class UserController {
 
 	findAllUsers = (req: Request, res: Response) => {
 		this.userService
-			.findAllUsers()
+			.findAllUsers(req.body.sessionUser)
 			.then((data) => {
 				return res.status(200).json(data);
 			})

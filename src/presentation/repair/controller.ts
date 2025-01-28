@@ -30,9 +30,9 @@ export class RepairController {
 			});
 	};
 
-	getPendingRepairs = async (req: Request, res: Response) => {
+	getPendingAndCompletedRepairs = async (req: Request, res: Response) => {
 		this.repairService
-			.getPendingRepairs(req.body.sessionUser)
+			.getPendingAndCompletedRepairs(req.body.sessionUser)
 			.then((data) => {
 				return res.status(200).json(data);
 			})
@@ -66,6 +66,17 @@ export class RepairController {
 	cancellRepair = async (req: Request, res: Response) => {
 		this.repairService
 			.cancellRepair(req.params.id, req.body.sessionUser)
+			.then((data) => {
+				return res.status(200).json(data);
+			})
+			.catch((error) => {
+				this.handleError(error, res);
+			});
+	};
+
+	getRepairsByClient = async (req: Request, res: Response) => {
+		this.repairService
+			.getRepairsByClient(req.params.id, req.body.sessionUser)
 			.then((data) => {
 				return res.status(200).json(data);
 			})

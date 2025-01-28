@@ -71,8 +71,12 @@ export class UserService {
 		return user;
 	}
 
-	async findAllUsers() {
+	async findAllUsers(sessionUser: User) {
 		const users = await User.createQueryBuilder('user').getMany();
+
+		if (sessionUser.role !== Role.EMPLOYEE) {
+			throw CustomError.forbidden('You are not allowed to get all users');
+		}
 
 		if (!users) {
 			throw CustomError.notFound('No users in database');
@@ -98,7 +102,8 @@ export class UserService {
 		const user = await this.findUserById(id);
 
 		if (!user) return CustomError.notFound('User not found');
-		if (userSession.id !== user.id || userSession.role !== Role.EMPLOYEE)
+
+		if (userSession.id !== user.id && userSession.role !== Role.EMPLOYEE)
 			return CustomError.forbidden('You are not allowed to update this user');
 
 		user.name = userData.name;
@@ -126,7 +131,7 @@ export class UserService {
 
 		if (!user) throw CustomError.notFound('User not found');
 
-		if (sessionUser.role !== Role.EMPLOYEE)
+		if (sessionUser.id !== id && sessionUser.role !== Role.EMPLOYEE)
 			throw CustomError.forbidden('You are not allowed to delete users');
 
 		user.status = UserStatus.DISABLED;

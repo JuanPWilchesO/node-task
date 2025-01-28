@@ -10,10 +10,15 @@ export class RepairService {
 			repairData.clientEmail,
 		);
 
+		if (sessionUser.role !== Role.EMPLOYEE)
+			throw CustomError.forbidden('Only employees can create repairs');
+
 		if (!client) throw CustomError.notFound('Client not found');
 
 		const repair = new Repair();
 
+		repair.motorsNumber = repairData.motorsNumber;
+		repair.description = repairData.description;
 		repair.client = client;
 		repair.created_by = sessionUser;
 
@@ -24,7 +29,7 @@ export class RepairService {
 		}
 	}
 
-	async getPendingRepairs(sessionUser: User) {
+	async getPendingAndCompletedRepairs(sessionUser: User) {
 		const repairs = await Repair.createQueryBuilder('repair')
 			.leftJoinAndSelect('repair.created_by', 'created_by')
 			.leftJoinAndSelect('repair.client', 'client')
@@ -35,15 +40,21 @@ export class RepairService {
 				'client.name',
 				'client.email',
 			])
-			.where('repair.status = :status', {
-				status: Status.PENDING,
-			})
+			.where(
+				'repair.status = :pendingStatus OR repair.status = :completedStatus',
+				{
+					pendingStatus: Status.PENDING,
+					completedStatus: Status.COMPLETED,
+				},
+			)
 			.getMany();
 
 		if (!repairs) throw CustomError.notFound('No repairs on database');
 
 		if (sessionUser.role !== Role.EMPLOYEE)
-			throw CustomError.forbidden('Only employees can get the pending repairs');
+			throw CustomError.forbidden(
+				'Only employees can get a list of all repairs',
+			);
 
 		return repairs;
 	}
@@ -59,9 +70,13 @@ export class RepairService {
 				'client.name',
 				'client.email',
 			])
-			.where('repair.status = :status', {
-				status: Status.PENDING,
-			})
+			.where(
+				'repair.status = :pendingStatus OR repair.status = :completedStatus',
+				{
+					pendingStatus: Status.PENDING,
+					completedStatus: Status.COMPLETED,
+				},
+			)
 			.andWhere('repair.id = :id', {
 				id,
 			})
@@ -122,5 +137,35 @@ export class RepairService {
 		} catch (error) {
 			throw CustomError.internalServer('Error cancelling repair');
 		}
+	}
+
+	async getRepairsByClient(id: string, sessionUser: User) {
+		const client = await this.userService.findUserById(id);
+
+		if (sessionUser.role !== Role.EMPLOYEE && sessionUser.id !== id)
+			throw CustomError.forbidden(
+				'Only employees or the client can get repairs',
+			);
+
+		if (!client) throw CustomError.notFound('Client not found');
+
+		const repairs = await Repair.createQueryBuilder('repair')
+			.leftJoinAndSelect('repair.created_by', 'created_by')
+			.leftJoinAndSelect('repair.client', 'client')
+			.select([
+				'repair',
+				'created_by.name',
+				'created_by.email',
+				'client.name',
+				'client.email',
+			])
+			.where('repair.client = :client', {
+				client: client.id,
+			})
+			.getMany();
+
+		if (!repairs) throw CustomError.notFound('No repairs for this client');
+
+		return repairs;
 	}
 }

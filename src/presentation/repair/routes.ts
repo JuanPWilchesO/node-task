@@ -14,10 +14,11 @@ export class RepairRoutes {
 
 		router.use(AuthMiddleWare.protect);
 		router.post('/', repairController.createRepair);
-		router.get('/', repairController.getPendingRepairs);
+		router.get('/', repairController.getPendingAndCompletedRepairs);
 		router.get('/:id', repairController.getOneRepair);
 		router.patch('/:id', repairController.completeRepair);
 		router.delete('/:id', repairController.cancellRepair);
+		router.get('/client/:id', repairController.getRepairsByClient);
 
 		return router;
 	}
